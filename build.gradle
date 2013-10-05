@@ -1,0 +1,15 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 1.6
+version = '0.1'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: "org.bouncycastle", name: "bcprov-jdk15on", version:"1.49"
+}
+
+

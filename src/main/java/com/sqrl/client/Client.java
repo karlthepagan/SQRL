@@ -5,6 +5,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -19,9 +20,9 @@ import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingExcepti
 import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 public class Client {
-
+    
     public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
-            PasswordVerifyException {
+            SQRLException {
         // stored user profile information, This should be loaded off disk for an existing sqrl identity OR 
         // generated fresh for a new sqrl identity
         //    256-bit private master identity key
@@ -36,12 +37,15 @@ public class Client {
         /**
          * LOGIN - Example
          */
-
+        // STEP 0: Have the user enter the password for the identity.
+        // example user-entered password
+        String password = "password";
+        
         // This is the web-site URL the user is going to login to using SQRL.
         // This URL will be decoded from the QR-code displayed on the site
         String siteURL = "www.example.com/sqrl?KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
         try {
-            SQRLAuthentication authentication = createAuthentication(siteURL, exampleIdentity);
+            SQRLAuthentication authentication = createAuthentication(exampleIdentity, password, siteURL);
             System.out.println("AUTHENTICATION RESULT: ");
             System.out.println(authentication);
             System.out.println();
@@ -53,24 +57,99 @@ public class Client {
         /**
          * CHANGE PASSWORD - Example
          */
-        // TODO
+        // STEP 0: Have the user enter the current password for the identity.
+        // example user-entered password
+        String currentPassword = "password";
+        
+        // STEP 1: Get the new password from the user
+        // User entered password, should probably have them enter twice because there is no returning from the change
+        // once its persisted on disk
+        String newPassword = "newpassword";
+        SQRLIdentity changedPasswordIdentity = changePassword(exampleIdentity, currentPassword, newPassword);
+        System.out.println("CHANGE PASSWORD RESULT: ");
+        System.out.println(changedPasswordIdentity);
+        System.out.println();
 
         /**
          * EXPORT MASTER KEY - Example
          */
         // TODO
+//        8-bit signature algorithm version
+//        256-bit encrypted master key
+//          8-bit password algorithm version
+//         64-bit per-password nonce
+//         64-bit per-password verifier
+//         16-bit computation burden spec (10 bit mantissa + 6 bit exp)
+
 
     }
 
-    public static SQRLAuthentication createAuthentication(String siteURL, SQRLIdentity identity) throws SQRLException {
-        // STEP 0: Have the user enter the password for the identity.
-        // example user-entered password
-        String password = "password";
+    public static SQRLIdentity changePassword(SQRLIdentity identity, String currentPassword, String newPassword) throws SQRLException {
+        // STEP 1: Scrypt the current password + passwordSalt
+        // This is the expensive operation and its parameters should be tuned so
+        // that this operation takes between 1-2 seconds to perform.
+        byte[] scryptResult = scrypt(currentPassword, identity.getPasswordSalt());
+        System.out.println("STEP 1: ");
+        System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
+        System.out.println();
 
+        // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
+        // current stored passwordVerify value.
+        byte[] passwordCheck = sha256(scryptResult);
+        System.out.println("STEP 2: ");
+        System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
+        System.out.println("Password Check : " + Base64.encode(passwordCheck));
+        boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
+        System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
+        if (!passwordCheckSuccess) {
+            System.out.println("Password Check Failed!");
+            System.out.println();
+            throw new PasswordVerifyException();
+        }
+        System.out.println();
+        
+        // STEP 3: XOR the master identity key from the SQRLIdentity with the
+        // result from STEP 1 to create the original master key
+        byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
+        System.out.println("STEP 3: ");
+        System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
+        System.out.println();
+        
+        // STEP 4: Create a new password salt
+        byte[] newPasswordSalt = secureRandom(8); // 64-bit salt
+        System.out.println("STEP 4: ");
+        System.out.println("New Password Salt: " + Base64.encode(newPasswordSalt));
+        System.out.println();
+        
+        // STEP 5: SCrypt the newPassword and newPasswordSalt
+        byte[] newScryptResult = scrypt(newPassword, newPasswordSalt);
+        System.out.println("STEP 5: ");
+        System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
+        System.out.println();
+        
+        // STEP 6: SHA256 the SCrypt result from STEP 6 to create the new password verifier
+        byte[] newPasswordVerify = sha256(newScryptResult);
+        System.out.println("STEP 6: ");
+        System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
+        System.out.println();
+        
+        // STEP 7: XOR the original master key with the SCrypt result from STEP 6 to create the new master identity key
+        byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
+        System.out.println("STEP 7: ");
+        System.out.println("New Master Identity Key: " + Base64.encode(newMasterIdentityKey));
+        System.out.println();
+        
+        // Return a new SQRLIdentity with the new password salt, password verify, and master identity key
+        // Note: the password is not permanently changed until this new identity object is written over the
+        //       old identity on disk.
+        return new SQRLIdentity(identity.getIdentityName(), newMasterIdentityKey, newPasswordVerify, newPasswordSalt);
+    }
+
+    public static SQRLAuthentication createAuthentication(SQRLIdentity identity, String password, String siteURL) throws SQRLException {
         // STEP 1: Scrypt the password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(password, identity);
+        byte[] scryptResult = scrypt(password, identity.getPasswordSalt());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
         System.out.println();
@@ -174,7 +253,7 @@ public class Client {
         return null;
     }
 
-    private static byte[] scrypt(String password, SQRLIdentity sqrlIdentity) {
+    private static byte[] scrypt(String password, byte[] passwordSalt) {
         // CPU Cost - This should be tuned so that this takes between 1 and 2
         // seconds to calculate
         int N = (int) Math.pow(2, 14);
@@ -187,11 +266,17 @@ public class Client {
 
         System.out.println("N: " + N);
         try {
-            return SCrypt.scrypt(password.getBytes(), sqrlIdentity.getPasswordSalt(), N, r, p, dkLen);
+            return SCrypt.scrypt(password.getBytes(), passwordSalt, N, r, p, dkLen);
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }
         return null;
     }
 
+    private static SecureRandom rand = new SecureRandom();
+    private static byte[] secureRandom(int numBytes) {
+        byte[] randBytes = new byte[numBytes];
+        rand.nextBytes(randBytes);
+        return randBytes;
+    }
 }

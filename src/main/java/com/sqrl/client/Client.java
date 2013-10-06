@@ -22,12 +22,11 @@ public class Client {
 
     public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
             PasswordVerifyException {
-        // stored user profile information, This should be loaded off disk for
-        // an existing
-        // sqrl identity OR generated fresh for a new sqrl identity
-        // 256-bit private master identity key
-        // 64-bit password salt
-        // 128-bit password verify value
+        // stored user profile information, This should be loaded off disk for an existing sqrl identity OR 
+        // generated fresh for a new sqrl identity
+        //    256-bit private master identity key
+        //    64-bit password salt
+        //    128-bit password verify value
         byte[] privateMasterIdentityKey = Base64.decode("VxXA0VcczUN6nj/9bMVlCeP7ogpqhmLCK54GIFTSl1s=");
         byte[] passwordSalt = Base64.decode("Ze6tha++1E0=");
         byte[] passwordVerify = Base64.decode("TlA6rTzAcCYWm8o/UF6sk3i8mU2JR/db34/6nE3HKDg=");
@@ -70,16 +69,14 @@ public class Client {
 
         // STEP 1: Scrypt the password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
-        // that this
-        // operation takes between 1-2 seconds to perform.
+        // that this operation takes between 1-2 seconds to perform.
         byte[] scryptResult = scrypt(password, identity);
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
         System.out.println();
 
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
-        // stored passwordVerify
-        // value.
+        // stored passwordVerify value.
         byte[] passwordCheck = sha256(scryptResult);
         System.out.println("STEP 2: ");
         System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
@@ -94,15 +91,13 @@ public class Client {
         System.out.println();
 
         // STEP 3: XOR the master identity key from the SQRLIdentity with the
-        // result from STEP 1
-        // to create the original master key
+        // result from STEP 1 to create the original master key
         byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
         System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
         System.out.println();
 
-        // STEP 4: HMACSHA-256 the master key result from STEP 3: with the site
-        // TLD
+        // STEP 4: HMACSHA-256 the master key result from STEP 3: with the site TLD
         byte[] privateKey = hmacSHA256(originalMasterKey, getTLD(siteURL));
         System.out.println("STEP 4: ");
         System.out.println("Private Key Length: " + privateKey.length * 8 + " bits");

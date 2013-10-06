@@ -9,7 +9,7 @@ repositories {
 }
 
 dependencies {
-    compile group: "org.bouncycastle", name: "bcprov-jdk15on", version:"1.49"
+    compile group: "com.lambdaworks", name: "scrypt", version: "1.4.0"
 }
 
 

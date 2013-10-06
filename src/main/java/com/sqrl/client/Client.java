@@ -142,13 +142,13 @@ public class Client {
         System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
         System.out.println();
         
-        // STEP 6: SHA256 the SCrypt result from STEP 6 to create the new password verifier
+        // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
         byte[] newPasswordVerify = sha256(newScryptResult);
         System.out.println("STEP 6: ");
         System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
         System.out.println();
         
-        // STEP 7: XOR the original master key with the SCrypt result from STEP 6 to create the new master identity key
+        // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
         byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
         System.out.println("New Master Identity Key: " + Base64.encode(newMasterIdentityKey));

@@ -21,8 +21,7 @@ public class SQRLAuthentication {
      */
     private byte[] identityPublicKey;
 
-    public SQRLAuthentication(String siteURL, byte[] identityAuthentication,
-            byte[] identityPublicKey) {
+    public SQRLAuthentication(String siteURL, byte[] identityAuthentication, byte[] identityPublicKey) {
         this.siteURL = siteURL;
         this.identityAuthentication = identityAuthentication;
         this.identityPublicKey = identityPublicKey;
@@ -43,7 +42,7 @@ public class SQRLAuthentication {
     @Override
     public String toString() {
         return "SQRLAuthentication [siteURL=" + siteURL + ", identityAuthentication="
-                + Base64.encode(identityAuthentication) + ", identityPublicKey="
-                + Base64.encode(identityPublicKey) + "]";
+                + Base64.encode(identityAuthentication) + ", identityPublicKey=" + Base64.encode(identityPublicKey)
+                + "]";
     }
 }

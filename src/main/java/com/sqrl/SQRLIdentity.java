@@ -38,8 +38,7 @@ public class SQRLIdentity {
      */
     private byte[] passwordSalt;
 
-    public SQRLIdentity(String identityName, byte[] masterIdentityKey, byte[] passwordVerify,
-            byte[] passwordSalt) {
+    public SQRLIdentity(String identityName, byte[] masterIdentityKey, byte[] passwordVerify, byte[] passwordSalt) {
         this.identityName = identityName;
         this.masterIdentityKey = masterIdentityKey;
         this.passwordVerify = passwordVerify;
@@ -64,9 +63,8 @@ public class SQRLIdentity {
 
     @Override
     public String toString() {
-        return "SQRLIdentity [identityName=" + identityName + ", masterIdentityKey="
-                + Base64.encode(masterIdentityKey) + ", passwordVerify="
-                + Base64.encode(passwordVerify) + ", passwordSalt=" + Base64.encode(passwordSalt)
+        return "SQRLIdentity [identityName=" + identityName + ", masterIdentityKey=" + Base64.encode(masterIdentityKey)
+                + ", passwordVerify=" + Base64.encode(passwordVerify) + ", passwordSalt=" + Base64.encode(passwordSalt)
                 + "]";
     }
 

@@ -20,21 +20,20 @@ import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 public class Client {
 
-    public static void main(String[] args) throws Base64DecodingException,
-            GeneralSecurityException, PasswordVerifyException {
+    public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
+            PasswordVerifyException {
         // stored user profile information, This should be loaded off disk for
         // an existing
         // sqrl identity OR generated fresh for a new sqrl identity
         // 256-bit private master identity key
         // 64-bit password salt
         // 128-bit password verify value
-        byte[] privateMasterIdentityKey = Base64
-                .decode("VxXA0VcczUN6nj/9bMVlCeP7ogpqhmLCK54GIFTSl1s=");
+        byte[] privateMasterIdentityKey = Base64.decode("VxXA0VcczUN6nj/9bMVlCeP7ogpqhmLCK54GIFTSl1s=");
         byte[] passwordSalt = Base64.decode("Ze6tha++1E0=");
         byte[] passwordVerify = Base64.decode("TlA6rTzAcCYWm8o/UF6sk3i8mU2JR/db34/6nE3HKDg=");
 
-        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity",
-                privateMasterIdentityKey, passwordVerify, passwordSalt);
+        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, passwordVerify,
+                passwordSalt);
         /**
          * LOGIN - Example
          */
@@ -48,8 +47,7 @@ public class Client {
             System.out.println(authentication);
             System.out.println();
         } catch (SQRLException e) {
-            System.out.println("Error creating authentication for " + getTLD(siteURL) + ":"
-                    + e.getMessage());
+            System.out.println("Error creating authentication for " + getTLD(siteURL) + ":" + e.getMessage());
             e.printStackTrace();
         }
 
@@ -65,8 +63,7 @@ public class Client {
 
     }
 
-    public static SQRLAuthentication createAuthentication(String siteURL, SQRLIdentity identity)
-            throws SQRLException {
+    public static SQRLAuthentication createAuthentication(String siteURL, SQRLIdentity identity) throws SQRLException {
         // STEP 0: Have the user enter the password for the identity.
         // example user-entered password
         String password = "password";
@@ -120,8 +117,7 @@ public class Client {
         System.out.println();
 
         // STEP 6: Sign the entire site URL with the private key from STEP 4.
-        byte[] signature = Curve25519.signature(siteURL.getBytes(Charset.forName("UTF-8")),
-                privateKey, publicKey);
+        byte[] signature = Curve25519.signature(siteURL.getBytes(Charset.forName("UTF-8")), privateKey, publicKey);
         System.out.println("STEP 6: ");
         System.out.println("Signature for " + siteURL);
         System.out.println("Signature Length: " + signature.length * 8);
@@ -196,8 +192,7 @@ public class Client {
 
         System.out.println("N: " + N);
         try {
-            return SCrypt.scrypt(password.getBytes(), sqrlIdentity.getPasswordSalt(), N, r, p,
-                    dkLen);
+            return SCrypt.scrypt(password.getBytes(), sqrlIdentity.getPasswordSalt(), N, r, p, dkLen);
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }

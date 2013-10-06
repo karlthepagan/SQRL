@@ -6,6 +6,7 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Date;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -23,6 +24,20 @@ public class Client {
     
     public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
             SQRLException {
+        
+        String warning = "WARNING: THIS CODE IS REALLY REALLY REALLY EXPIREMENTAL, DO NOT USE FOR ANYTHING "
+                       + "EXCEPT LEARNING HOW SOME OF THE CRYPTO BEHIND SQRL CAN BE IMPLEMENTED.";
+        System.err.println(warning);
+        
+        // Because this code is so experimental, if its not being maintained anymore, then don't let it even run
+        //  if the current date is great than January 1, 2014
+        if ( new Date().getTime() >  1388556000L * 1000L ) {
+            System.err.println();
+            System.err.println("ERROR: THIS CODE IS TOO OLD!, if it had been maintained, "
+                             + "this time check would have been removed");
+            System.exit(-1);
+        }
+        
         // stored user profile information, This should be loaded off disk for an existing sqrl identity OR 
         // generated fresh for a new sqrl identity
         //    256-bit private master identity key

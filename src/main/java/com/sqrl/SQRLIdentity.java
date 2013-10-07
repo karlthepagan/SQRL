@@ -24,25 +24,22 @@ public class SQRLIdentity {
 
     /**
      * Password Verify Value (128-bits)
-     * 
+     *
      * This is the first 128-bits of SHA256(scrypt_result) and is used to verify
      * the password was entered correctly.
      */
     private byte[] passwordVerify;
 
     /**
-     * Password Salt (64-bits)
-     * 
-     * This is a randomly generated salt value generated when the password is
-     * first set. Whenever the password changes, this also should change.
+     * Encapsulates all of the password information
      */
-    private byte[] passwordSalt;
+    private SQRLPasswordParameters passwordParameters;
 
-    public SQRLIdentity(String identityName, byte[] masterIdentityKey, byte[] passwordVerify, byte[] passwordSalt) {
+    public SQRLIdentity(String identityName, byte[] masterIdentityKey, byte[] passwordVerify, SQRLPasswordParameters passwordParameters) {
         this.identityName = identityName;
         this.masterIdentityKey = masterIdentityKey;
         this.passwordVerify = passwordVerify;
-        this.passwordSalt = passwordSalt;
+        this.passwordParameters = passwordParameters;
     }
 
     public String getIdentityName() {
@@ -57,15 +54,13 @@ public class SQRLIdentity {
         return passwordVerify;
     }
 
-    public byte[] getPasswordSalt() {
-        return passwordSalt;
+    public SQRLPasswordParameters getPasswordParameters() {
+        return passwordParameters;
     }
 
     @Override
     public String toString() {
         return "SQRLIdentity [identityName=" + identityName + ", masterIdentityKey=" + Base64.encode(masterIdentityKey)
-                + ", passwordVerify=" + Base64.encode(passwordVerify) + ", passwordSalt=" + Base64.encode(passwordSalt)
-                + "]";
+                + ", passwordVerify=" + Base64.encode(passwordVerify) + ", passwordParameters=" + passwordParameters + "]";
     }
-
 }

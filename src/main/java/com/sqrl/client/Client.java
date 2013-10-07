@@ -14,6 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
 import com.lambdaworks.crypto.SCrypt;
 import com.sqrl.SQRLAuthentication;
 import com.sqrl.SQRLIdentity;
+import com.sqrl.SQRLPasswordParameters;
 import com.sqrl.crypto.Curve25519;
 import com.sqrl.exception.PasswordVerifyException;
 import com.sqrl.exception.SQRLException;
@@ -47,8 +48,8 @@ public class Client {
         byte[] passwordSalt = Base64.decode("Ze6tha++1E0=");
         byte[] passwordVerify = Base64.decode("TlA6rTzAcCYWm8o/UF6sk3i8mU2JR/db34/6nE3HKDg=");
 
-        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, passwordVerify,
-                passwordSalt);
+        SQRLPasswordParameters examplePasswordParameters = new SQRLPasswordParameters(passwordSalt,14,8,1);
+        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, passwordVerify, examplePasswordParameters);
         /**
          * LOGIN - Example
          */
@@ -95,15 +96,13 @@ public class Client {
 //         64-bit per-password nonce
 //         64-bit per-password verifier
 //         16-bit computation burden spec (10 bit mantissa + 6 bit exp)
-
-
     }
 
     public static SQRLIdentity changePassword(SQRLIdentity identity, String currentPassword, String newPassword) throws SQRLException {
         // STEP 1: Scrypt the current password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(currentPassword, identity.getPasswordSalt());
+        byte[] scryptResult = scrypt(currentPassword, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
         System.out.println();
@@ -135,9 +134,10 @@ public class Client {
         System.out.println("STEP 4: ");
         System.out.println("New Password Salt: " + Base64.encode(newPasswordSalt));
         System.out.println();
-        
+
         // STEP 5: SCrypt the newPassword and newPasswordSalt
-        byte[] newScryptResult = scrypt(newPassword, newPasswordSalt);
+        SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 14, 8, 1);
+        byte[] newScryptResult = scrypt(newPassword, newPasswordParameters);
         System.out.println("STEP 5: ");
         System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
         System.out.println();
@@ -147,7 +147,7 @@ public class Client {
         System.out.println("STEP 6: ");
         System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
         System.out.println();
-        
+
         // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
         byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
@@ -157,14 +157,14 @@ public class Client {
         // Return a new SQRLIdentity with the new password salt, password verify, and master identity key
         // Note: the password is not permanently changed until this new identity object is written over the
         //       old identity on disk.
-        return new SQRLIdentity(identity.getIdentityName(), newMasterIdentityKey, newPasswordVerify, newPasswordSalt);
+        return new SQRLIdentity(identity.getIdentityName(), newMasterIdentityKey, newPasswordVerify, newPasswordParameters);
     }
 
     public static SQRLAuthentication createAuthentication(SQRLIdentity identity, String password, String siteURL) throws SQRLException {
         // STEP 1: Scrypt the password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(password, identity.getPasswordSalt());
+        byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
         System.out.println();
@@ -268,20 +268,12 @@ public class Client {
         return null;
     }
 
-    private static byte[] scrypt(String password, byte[] passwordSalt) {
-        // CPU Cost - This should be tuned so that this takes between 1 and 2
-        // seconds to calculate
-        int N = (int) Math.pow(2, 14);
-        // Memory Cost
-        int r = 8;
-        // Parallelization
-        int p = 1;
-        // output length : 256-bits
-        int dkLen = 32;
-
-        System.out.println("N: " + N);
+    private static byte[] scrypt(String password, SQRLPasswordParameters sqrlPassword) {
+        System.out.println("N: " + sqrlPassword.getHashN());
         try {
-            return SCrypt.scrypt(password.getBytes(), passwordSalt, N, r, p, dkLen);
+            return SCrypt.scrypt(password.getBytes(), sqrlPassword.getPasswordSalt(),
+                    sqrlPassword.getHashN(), sqrlPassword.getHashR(), sqrlPassword.getHashP(),
+                    sqrlPassword.getHashLength());
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }

@@ -48,10 +48,12 @@ public class Client {
         //    128-bit password verify value
         byte[] privateMasterIdentityKey = Base64.decode("VxXA0VcczUN6nj/9bMVlCeP7ogpqhmLCK54GIFTSl1s=");
         byte[] passwordSalt = Base64.decode("Ze6tha++1E0=");
-        byte[] passwordVerify = Base64.decode("TlA6rTzAcCYWm8o/UF6sk3i8mU2JR/db34/6nE3HKDg=");
+        byte[] passwordVerify = Base64.decode("wMS9dlme6gyPDkT9obtWiQyLYiLLC9nv+QJICM3xgXI=");
 
-        SQRLPasswordParameters examplePasswordParameters = new SQRLPasswordParameters(passwordSalt,14,8,1);
-        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, passwordVerify, examplePasswordParameters);
+        SQRLPasswordParameters examplePasswordParameters = new SQRLPasswordParameters(passwordSalt, 16,8,12);
+        SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, 
+                                                        passwordVerify, examplePasswordParameters);
+        
         /**
          * LOGIN - Example
          */
@@ -218,7 +220,7 @@ public class Client {
         System.out.println();
 
         // STEP 5: SCrypt the newPassword and newPasswordSalt
-        SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 14, 8, 1);
+        SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 16, 8, 12);
         byte[] newScryptResult = scrypt(newPassword, newPasswordParameters);
         System.out.println("STEP 5: ");
         System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));

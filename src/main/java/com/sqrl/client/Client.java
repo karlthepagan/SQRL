@@ -55,51 +55,131 @@ public class Client {
         /**
          * LOGIN - Example
          */
-        // STEP 0: Have the user enter the password for the identity.
-        // example user-entered password
-        String password = "password";
-        
-        // This is the web-site URL the user is going to login to using SQRL.
-        // This URL will be decoded from the QR-code displayed on the site
-        String siteURL = "www.example.com/sqrl?KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
-        try {
-            SQRLAuthentication authentication = createAuthentication(exampleIdentity, password, siteURL);
-            System.out.println("AUTHENTICATION RESULT: ");
-            System.out.println(authentication);
-            System.out.println();
-        } catch (SQRLException e) {
-            System.out.println("Error creating authentication for " + getTLD(siteURL) + ":" + e.getMessage());
-            e.printStackTrace();
+        {
+            System.out.println("~~~Begin LOGIN example~~~");
+            // STEP 0: Have the user enter the password for the identity.
+            // example user-entered password
+            String password = "password";
+            
+            // This is the web-site URL the user is going to login to using SQRL.
+            // This URL will be decoded from the QR-code displayed on the site
+            String siteURL = "www.example.com/sqrl?KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
+            try {
+                SQRLAuthentication authentication = createAuthentication(exampleIdentity, password, siteURL);
+                System.out.println("LOGIN example result: ");
+                System.out.println(authentication);
+                System.out.println();
+            } catch (SQRLException e) {
+                System.out.println("Error creating authentication for " + getTLD(siteURL) + ":" + e.getMessage());
+                e.printStackTrace();
+            }
         }
-
+        
         /**
          * CHANGE PASSWORD - Example
          */
-        // STEP 0: Have the user enter the current password for the identity.
-        // example user-entered password
-        String currentPassword = "password";
+        {
+            System.out.println("~~~Begin CHANGE PASSWORD example~~~");
+            // STEP 0: Have the user enter the current password for the identity.
+            // example user-entered password
+            String currentPassword = "password";
+            
+            // STEP 1: Get the new password from the user
+            // User entered password, should probably have them enter twice because there is no returning from the change
+            // once its persisted on disk
+            String newPassword = "newpassword";
+            SQRLIdentity changedPasswordIdentity = changePassword(exampleIdentity, currentPassword, newPassword);
+            System.out.println("CHANGE PASSWORD RESULT: ");
+            System.out.println(changedPasswordIdentity);
+            System.out.println();
+        }
         
-        // STEP 1: Get the new password from the user
-        // User entered password, should probably have them enter twice because there is no returning from the change
-        // once its persisted on disk
-        String newPassword = "newpassword";
-        SQRLIdentity changedPasswordIdentity = changePassword(exampleIdentity, currentPassword, newPassword);
-        System.out.println("CHANGE PASSWORD RESULT: ");
-        System.out.println(changedPasswordIdentity);
-        System.out.println();
-
         /**
          * EXPORT MASTER KEY - Example
          */
-        // TODO
-//        8-bit signature algorithm version
-//        256-bit encrypted master key
-//          8-bit password algorithm version
-//         64-bit per-password nonce
-//         64-bit per-password verifier
-//         16-bit computation burden spec (10 bit mantissa + 6 bit exp)
+        {
+            System.out.println("~~~Begin EXPORT MASTER IDENTITY example~~~");
+            // STEP 0: Have the user enter the current password for the identity.
+            // example user-entered password
+            String currentPassword = "password";
+        
+            SQRLIdentity exportedIdentity = exportMasterKey(exampleIdentity, currentPassword);
+            
+            System.out.println("EXPORT MASTER KEY RESULT: ");
+            System.out.println(exportedIdentity);
+            System.out.println();
+
+            // TODO pack the exported identity into the agreed upon export format, the current proposal is:
+            //        8-bit signature algorithm version
+            //        256-bit encrypted master key
+            //          8-bit password algorithm version
+            //         64-bit per-password nonce
+            //         64-bit per-password verifier
+            //         16-bit computation burden spec (10 bit mantissa + 6 bit exp)
+        }
     }
 
+    public static SQRLIdentity exportMasterKey(SQRLIdentity identity, String password) throws SQRLException {
+        // STEP 1: Scrypt the current password + passwordSalt
+        // This is the expensive operation and its parameters should be tuned so
+        // that this operation takes between 1-2 seconds to perform.
+        byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
+        System.out.println("STEP 1: ");
+        System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
+        System.out.println();
+        
+        // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
+        // current stored passwordVerify value.
+        byte[] passwordCheck = sha256(scryptResult);
+        System.out.println("STEP 2: ");
+        System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
+        System.out.println("Password Check : " + Base64.encode(passwordCheck));
+        boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
+        System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
+        if (!passwordCheckSuccess) {
+            System.out.println("Password Check Failed!");
+            System.out.println();
+            throw new PasswordVerifyException();
+        }
+        System.out.println();
+        
+        // STEP 3: XOR the master identity key from the SQRLIdentity with the
+        // result from STEP 1 to create the original master key
+        byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
+        System.out.println("STEP 3: ");
+        System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
+        System.out.println();
+        
+        // STEP 4: Create a new password salt
+        byte[] newPasswordSalt = secureRandom(8); // 64-bit salt
+        System.out.println("STEP 4: ");
+        System.out.println("New Password Salt: " + Base64.encode(newPasswordSalt));
+        System.out.println();
+        
+        // STEP 5: SCrypt the current password and newPasswordSalt with WAY more difficult SCryptParameters
+        SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 18, 8, 90);
+        byte[] newScryptResult = scrypt(password, newPasswordParameters);
+        System.out.println("STEP 5: ");
+        System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
+        System.out.println();
+        
+        // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
+        byte[] newPasswordVerify = sha256(newScryptResult);
+        System.out.println("STEP 6: ");
+        System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
+        System.out.println();
+        
+        // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
+        byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
+        System.out.println("STEP 7: ");
+        System.out.println("New Master Identity Key: " + Base64.encode(newMasterIdentityKey));
+        System.out.println();
+        
+        // Return a new SQRLIdentity with the new password salt, password verify, password parameters 
+        //  and master identity key
+        return new SQRLIdentity(identity.getIdentityName(), newMasterIdentityKey, newPasswordVerify, newPasswordParameters);
+    }
+    
     public static SQRLIdentity changePassword(SQRLIdentity identity, String currentPassword, String newPassword) throws SQRLException {
         // STEP 1: Scrypt the current password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so

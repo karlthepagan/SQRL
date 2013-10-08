@@ -6,6 +6,7 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.text.DecimalFormat;
 import java.util.Date;
 
 import javax.crypto.Mac;
@@ -22,6 +23,7 @@ import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingExcepti
 import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 public class Client {
+    private static final DecimalFormat df = new DecimalFormat("#.##");
     
     public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
             SQRLException {
@@ -269,11 +271,16 @@ public class Client {
     }
 
     private static byte[] scrypt(String password, SQRLPasswordParameters sqrlPassword) {
-        System.out.println("N: " + sqrlPassword.getHashN());
+        System.out.println("N: " + (1 << sqrlPassword.getHashN()));
         try {
-            return SCrypt.scrypt(password.getBytes(), sqrlPassword.getPasswordSalt(),
-                    sqrlPassword.getHashN(), sqrlPassword.getHashR(), sqrlPassword.getHashP(),
-                    sqrlPassword.getHashLength());
+            long startTime = System.currentTimeMillis();
+            byte[] scryptResult = SCrypt.scrypt(password.getBytes(), sqrlPassword.getPasswordSalt(), 
+                                                1 << sqrlPassword.getHashN(), sqrlPassword.getHashR(), 
+                                                sqrlPassword.getHashP(), sqrlPassword.getHashLength());
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            System.out.println("SCrypt (N = " + sqrlPassword.getHashN() + ") took " + 
+                               df.format(elapsedTime/1000.0) + " seconds.");
+            return scryptResult;
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }

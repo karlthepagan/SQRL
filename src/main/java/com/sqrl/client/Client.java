@@ -65,7 +65,8 @@ public class Client {
             
             // This is the web-site URL the user is going to login to using SQRL.
             // This URL will be decoded from the QR-code displayed on the site
-            String siteURL = "www.example.com/sqrl?KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
+			String siteURL = "www.example.com/~bob/sqrl.php?d=x&ip=192.168.1.1&"
+					+ "webnonce=KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
             try {
                 SQRLAuthentication authentication = createAuthentication(exampleIdentity, password, siteURL);
                 System.out.println("LOGIN example result: ");
@@ -304,8 +305,42 @@ public class Client {
 
     // //////////// HELPER FUNCTIONS //////////////////
 
+	/**
+	 * Extract the TLD from the supplied site URL
+	 * 
+	 * @param siteURL
+	 *            The site's complete URL to be disassembled.
+	 * @return The TLD for the give site URL
+	 */
     private static String getTLD(String siteURL) {
-        return siteURL.split("/sqrl")[0];
+		// TODO
+		String tld = new String();
+		int d = 0;
+
+		tld = siteURL.split( "\\?" )[0];
+		String params[] = siteURL.split( "\\?" )[1].split( "&" );
+
+		for ( String param : params )
+		{
+			if ( param.startsWith( "d=" ) )
+			{
+				try {
+					d = Integer.parseInt( param.split( "=" )[1] );
+				}
+				catch (NumberFormatException e){
+					d = 0;
+				}
+			}
+		}
+
+		// Find the first / to find the end of the normal TLD
+		int endOfTld = tld.indexOf( "/" );
+		// Add the value of d, to get the SQRL TLD
+		endOfTld += d;
+
+		tld = tld.substring( 0, endOfTld );
+		System.out.println( "TLD + " + tld + "\n");
+		return tld;
     }
 
     private static byte[] xor(byte[] a, byte[] b) {

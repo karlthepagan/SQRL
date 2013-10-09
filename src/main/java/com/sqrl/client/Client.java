@@ -65,7 +65,7 @@ public class Client {
             
             // This is the web-site URL the user is going to login to using SQRL.
             // This URL will be decoded from the QR-code displayed on the site
-			String siteURL = "www.example.com/~bob/sqrl.php?d=x&ip=192.168.1.1&"
+			String siteURL = "www.example.com/~bob/sqrl.php?d=5&ip=192.168.1.1&"
 					+ "webnonce=KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
             try {
                 SQRLAuthentication authentication = createAuthentication(exampleIdentity, password, siteURL);

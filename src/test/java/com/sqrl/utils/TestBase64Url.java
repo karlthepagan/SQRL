@@ -29,7 +29,6 @@ public class TestBase64Url {
     @Test
     public void testEncodeMasterIdentityKey() {
         String testEncoded = Base64Url.encode(masterIdentityKey);
-        System.out.println(Base64Url.encode(Base64Url.decode("wMS9dlme6gyPDkT9obtWiQyLYiLLC9nv+QJICM3xgXI=")));
         assertEquals(masterIdeneityKeyBase64, testEncoded);
     }
     

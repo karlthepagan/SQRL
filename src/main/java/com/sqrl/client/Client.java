@@ -313,34 +313,32 @@ public class Client {
 	 * @return The TLD for the give site URL
 	 */
     private static String getTLD(String siteURL) {
-		// TODO
-		String tld = new String();
-		int d = 0;
+        // Example site URL:
+        // "www.example.com/~bob/sqrl.php?d=5&ip=192.168.1.1&webnonce=KJA7nLFDQWWmvt10yVjNDoQ81uTvNorPrr53PPRJesz";
+        String tld = new String();
+        int d = 0;
 
-		tld = siteURL.split( "\\?" )[0];
-		String params[] = siteURL.split( "\\?" )[1].split( "&" );
+        tld = siteURL.split("\\?")[0];
+        String params[] = siteURL.split("\\?")[1].split("&");
 
-		for ( String param : params )
-		{
-			if ( param.startsWith( "d=" ) )
-			{
-				try {
-					d = Integer.parseInt( param.split( "=" )[1] );
-				}
-				catch (NumberFormatException e){
-					d = 0;
-				}
-			}
-		}
+        for (String param : params) {
+            if (param.startsWith("d=")) {
+                try {
+                    d = Integer.parseInt(param.split("=")[1]);
+                } catch (NumberFormatException e) {
+                    d = 0;
+                }
+            }
+        }
 
-		// Find the first / to find the end of the normal TLD
-		int endOfTld = tld.indexOf( "/" );
-		// Add the value of d, to get the SQRL TLD
-		endOfTld += d;
+        // Find the first / to find the end of the normal TLD
+        int endOfTld = tld.indexOf("/");
+        // Add the value of d, to get the SQRL TLD
+        endOfTld += d;
 
-		tld = tld.substring( 0, endOfTld );
-		System.out.println( "TLD + " + tld + "\n");
-		return tld;
+        tld = tld.substring(0, endOfTld);
+        System.out.println("TLD : " + tld + "\n");
+        return tld;
     }
 
     private static byte[] xor(byte[] a, byte[] b) {

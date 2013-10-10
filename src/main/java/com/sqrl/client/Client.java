@@ -19,14 +19,12 @@ import com.sqrl.SQRLPasswordParameters;
 import com.sqrl.crypto.Curve25519;
 import com.sqrl.exception.PasswordVerifyException;
 import com.sqrl.exception.SQRLException;
-import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.sqrl.utils.Base64Url;
 
 public class Client {
     private static final DecimalFormat df = new DecimalFormat("#.##");
     
-    public static void main(String[] args) throws Base64DecodingException, GeneralSecurityException,
-            SQRLException {
+    public static void main(String[] args) throws GeneralSecurityException, SQRLException {
         
         String warning = "WARNING: THIS CODE IS REALLY REALLY REALLY EXPIREMENTAL, DO NOT USE FOR ANYTHING "
                        + "EXCEPT LEARNING HOW SOME OF THE CRYPTO BEHIND SQRL CAN BE IMPLEMENTED.";
@@ -46,9 +44,9 @@ public class Client {
         //    256-bit private master identity key
         //    64-bit password salt
         //    128-bit password verify value
-        byte[] privateMasterIdentityKey = Base64.decode("VxXA0VcczUN6nj/9bMVlCeP7ogpqhmLCK54GIFTSl1s=");
-        byte[] passwordSalt = Base64.decode("Ze6tha++1E0=");
-        byte[] passwordVerify = Base64.decode("wMS9dlme6gyPDkT9obtWiQyLYiLLC9nv+QJICM3xgXI=");
+        byte[] privateMasterIdentityKey = Base64Url.decode("VxXA0VcczUN6nj_9bMVlCeP7ogpqhmLCK54GIFTSl1s");
+        byte[] passwordSalt = Base64Url.decode("Ze6tha--1E0");
+        byte[] passwordVerify = Base64Url.decode("wMS9dlme6gyPDkT9obtWiQyLYiLLC9nv-QJICM3xgXI");
 
         SQRLPasswordParameters examplePasswordParameters = new SQRLPasswordParameters(passwordSalt, 16,8,12);
         SQRLIdentity exampleIdentity = new SQRLIdentity("example identity", privateMasterIdentityKey, 
@@ -128,15 +126,15 @@ public class Client {
         // that this operation takes between 1-2 seconds to perform.
         byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
-        System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
+        System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
         
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // current stored passwordVerify value.
         byte[] passwordCheck = sha256(scryptResult);
         System.out.println("STEP 2: ");
-        System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
-        System.out.println("Password Check : " + Base64.encode(passwordCheck));
+        System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
+        System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
         boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
@@ -150,32 +148,32 @@ public class Client {
         // result from STEP 1 to create the original master key
         byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
-        System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
+        System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
         
         // STEP 4: Create a new password salt
         byte[] newPasswordSalt = secureRandom(8); // 64-bit salt
         System.out.println("STEP 4: ");
-        System.out.println("New Password Salt: " + Base64.encode(newPasswordSalt));
+        System.out.println("New Password Salt: " + Base64Url.encode(newPasswordSalt));
         System.out.println();
         
         // STEP 5: SCrypt the current password and newPasswordSalt with WAY more difficult SCryptParameters
         SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 18, 8, 90);
         byte[] newScryptResult = scrypt(password, newPasswordParameters);
         System.out.println("STEP 5: ");
-        System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
+        System.out.println("SCrypt of New Password + Salt: " + Base64Url.encode(newScryptResult));
         System.out.println();
         
         // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
         byte[] newPasswordVerify = sha256(newScryptResult);
         System.out.println("STEP 6: ");
-        System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
+        System.out.println("New Password Verify: " + Base64Url.encode(newPasswordVerify));
         System.out.println();
         
         // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
         byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
-        System.out.println("New Master Identity Key: " + Base64.encode(newMasterIdentityKey));
+        System.out.println("New Master Identity Key: " + Base64Url.encode(newMasterIdentityKey));
         System.out.println();
         
         // Return a new SQRLIdentity with the new password salt, password verify, password parameters 
@@ -189,15 +187,15 @@ public class Client {
         // that this operation takes between 1-2 seconds to perform.
         byte[] scryptResult = scrypt(currentPassword, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
-        System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
+        System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
 
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // current stored passwordVerify value.
         byte[] passwordCheck = sha256(scryptResult);
         System.out.println("STEP 2: ");
-        System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
-        System.out.println("Password Check : " + Base64.encode(passwordCheck));
+        System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
+        System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
         boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
@@ -211,32 +209,32 @@ public class Client {
         // result from STEP 1 to create the original master key
         byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
-        System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
+        System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
         
         // STEP 4: Create a new password salt
         byte[] newPasswordSalt = secureRandom(8); // 64-bit salt
         System.out.println("STEP 4: ");
-        System.out.println("New Password Salt: " + Base64.encode(newPasswordSalt));
+        System.out.println("New Password Salt: " + Base64Url.encode(newPasswordSalt));
         System.out.println();
 
         // STEP 5: SCrypt the newPassword and newPasswordSalt
         SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 16, 8, 12);
         byte[] newScryptResult = scrypt(newPassword, newPasswordParameters);
         System.out.println("STEP 5: ");
-        System.out.println("SCrypt of New Password + Salt: " + Base64.encode(newScryptResult));
+        System.out.println("SCrypt of New Password + Salt: " + Base64Url.encode(newScryptResult));
         System.out.println();
         
         // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
         byte[] newPasswordVerify = sha256(newScryptResult);
         System.out.println("STEP 6: ");
-        System.out.println("New Password Verify: " + Base64.encode(newPasswordVerify));
+        System.out.println("New Password Verify: " + Base64Url.encode(newPasswordVerify));
         System.out.println();
 
         // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
         byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
-        System.out.println("New Master Identity Key: " + Base64.encode(newMasterIdentityKey));
+        System.out.println("New Master Identity Key: " + Base64Url.encode(newMasterIdentityKey));
         System.out.println();
         
         // Return a new SQRLIdentity with the new password salt, password verify, and master identity key
@@ -251,15 +249,15 @@ public class Client {
         // that this operation takes between 1-2 seconds to perform.
         byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
-        System.out.println("Scrypt of password + salt: " + Base64.encode(scryptResult));
+        System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
 
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // stored passwordVerify value.
         byte[] passwordCheck = sha256(scryptResult);
         System.out.println("STEP 2: ");
-        System.out.println("Password Verify: " + Base64.encode(identity.getPasswordVerify()));
-        System.out.println("Password Check : " + Base64.encode(passwordCheck));
+        System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
+        System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
         boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
@@ -273,21 +271,21 @@ public class Client {
         // result from STEP 1 to create the original master key
         byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
-        System.out.println("Original Master Key: " + Base64.encode(originalMasterKey));
+        System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
 
         // STEP 4: HMACSHA-256 the master key result from STEP 3: with the site TLD
         byte[] privateKey = hmacSHA256(originalMasterKey, getTLD(siteURL));
         System.out.println("STEP 4: ");
         System.out.println("Private Key Length: " + privateKey.length * 8 + " bits");
-        System.out.println("Private Key: " + Base64.encode(privateKey));
+        System.out.println("Private Key: " + Base64Url.encode(privateKey));
         System.out.println();
 
         // STEP 5: Synthesize a public key by using the result from STEP 4
         byte[] publicKey = Curve25519.publickey(privateKey);
         System.out.println("STEP 5: ");
         System.out.println("Public Key Length: " + publicKey.length * 8 + " bits");
-        System.out.println("Public Key: " + Base64.encode(publicKey));
+        System.out.println("Public Key: " + Base64Url.encode(publicKey));
         System.out.println();
 
         // STEP 6: Sign the entire site URL with the private key from STEP 4.
@@ -295,7 +293,7 @@ public class Client {
         System.out.println("STEP 6: ");
         System.out.println("Signature for " + siteURL);
         System.out.println("Signature Length: " + signature.length * 8);
-        System.out.println("Signature: " + Base64.encode(signature));
+        System.out.println("Signature: " + Base64Url.encode(signature));
         System.out.println();
 
         // Return authentication object containing all the

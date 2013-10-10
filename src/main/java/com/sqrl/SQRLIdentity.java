@@ -1,6 +1,6 @@
 package com.sqrl;
 
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.sqrl.utils.Base64Url;
 
 /**
  * Represents a SQRL identity.
@@ -60,7 +60,8 @@ public class SQRLIdentity {
 
     @Override
     public String toString() {
-        return "SQRLIdentity [identityName=" + identityName + ", masterIdentityKey=" + Base64.encode(masterIdentityKey)
-                + ", passwordVerify=" + Base64.encode(passwordVerify) + ", passwordParameters=" + passwordParameters + "]";
+        return "SQRLIdentity [identityName=" + identityName + ", masterIdentityKey="
+                + Base64Url.encode(masterIdentityKey) + ", passwordVerify=" + Base64Url.encode(passwordVerify)
+                + ", passwordParameters=" + passwordParameters + "]";
     }
 }

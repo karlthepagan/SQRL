@@ -1,6 +1,6 @@
 package com.sqrl;
 
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.sqrl.utils.Base64Url;
 
 /**
  * Encapsulates all of the password encryption parameters.
@@ -8,7 +8,7 @@ import com.sun.org.apache.xml.internal.security.utils.Base64;
 public class SQRLPasswordParameters {
     /**
      * Password Salt (64-bits)
-     *
+     * 
      * This is a randomly generated salt value generated when the password is
      * first set. Whenever the password changes, this also should change.
      */
@@ -64,6 +64,7 @@ public class SQRLPasswordParameters {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "[N=" + N + ", r=" + r + ", p=" + p + ", salt=" + Base64.encode(passwordSalt) + "]";
+        return this.getClass().getSimpleName() + "[N=" + N + ", r=" + r + ", p=" + p + ", salt="
+                + Base64Url.encode(passwordSalt) + "]";
     }
 }

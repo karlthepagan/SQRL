@@ -1,6 +1,6 @@
 package com.sqrl;
 
-import com.sun.org.apache.xml.internal.security.utils.Base64;
+import com.sqrl.utils.Base64Url;
 
 public class SQRLAuthentication {
 
@@ -42,7 +42,7 @@ public class SQRLAuthentication {
     @Override
     public String toString() {
         return "SQRLAuthentication [siteURL=" + siteURL + ", identityAuthentication="
-                + Base64.encode(identityAuthentication) + ", identityPublicKey=" + Base64.encode(identityPublicKey)
-                + "]";
+                + Base64Url.encode(identityAuthentication) + ", identityPublicKey="
+                + Base64Url.encode(identityPublicKey) + "]";
     }
 }

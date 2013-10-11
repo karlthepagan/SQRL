@@ -12,18 +12,20 @@ import java.util.Date;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.lambdaworks.crypto.SCrypt;
 import com.sqrl.SQRLAuthentication;
 import com.sqrl.SQRLIdentity;
 import com.sqrl.SQRLPasswordParameters;
 import com.sqrl.crypto.Curve25519;
+import com.sqrl.crypto.HMACSHA256;
+import com.sqrl.crypto.SCrypt;
+import com.sqrl.crypto.SHA256;
 import com.sqrl.exception.PasswordVerifyException;
 import com.sqrl.exception.SQRLException;
 import com.sqrl.utils.Base64Url;
+import com.sqrl.utils.Bytes;
 
 public class Client {
-    private static final DecimalFormat df = new DecimalFormat("#.##");
-    
+       
     public static void main(String[] args) throws GeneralSecurityException, SQRLException {
         
         String warning = "WARNING: THIS CODE IS REALLY REALLY REALLY EXPIREMENTAL, DO NOT USE FOR ANYTHING "
@@ -124,18 +126,18 @@ public class Client {
         // STEP 1: Scrypt the current password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
+        byte[] scryptResult = SCrypt.scrypt(password, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
         
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // current stored passwordVerify value.
-        byte[] passwordCheck = sha256(scryptResult);
+        byte[] passwordCheck = SHA256.digest(scryptResult);
         System.out.println("STEP 2: ");
         System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
         System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
-        boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
+        boolean passwordCheckSuccess = Bytes.arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
             System.out.println("Password Check Failed!");
@@ -146,7 +148,7 @@ public class Client {
         
         // STEP 3: XOR the master identity key from the SQRLIdentity with the
         // result from STEP 1 to create the original master key
-        byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
+        byte[] originalMasterKey = Bytes.xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
         System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
@@ -159,19 +161,19 @@ public class Client {
         
         // STEP 5: SCrypt the current password and newPasswordSalt with WAY more difficult SCryptParameters
         SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 18, 8, 90);
-        byte[] newScryptResult = scrypt(password, newPasswordParameters);
+        byte[] newScryptResult = SCrypt.scrypt(password, newPasswordParameters);
         System.out.println("STEP 5: ");
         System.out.println("SCrypt of New Password + Salt: " + Base64Url.encode(newScryptResult));
         System.out.println();
         
         // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
-        byte[] newPasswordVerify = sha256(newScryptResult);
+        byte[] newPasswordVerify = SHA256.digest(newScryptResult);
         System.out.println("STEP 6: ");
         System.out.println("New Password Verify: " + Base64Url.encode(newPasswordVerify));
         System.out.println();
         
         // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
-        byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
+        byte[] newMasterIdentityKey = Bytes.xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
         System.out.println("New Master Identity Key: " + Base64Url.encode(newMasterIdentityKey));
         System.out.println();
@@ -185,18 +187,18 @@ public class Client {
         // STEP 1: Scrypt the current password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(currentPassword, identity.getPasswordParameters());
+        byte[] scryptResult = SCrypt.scrypt(currentPassword, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
 
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // current stored passwordVerify value.
-        byte[] passwordCheck = sha256(scryptResult);
+        byte[] passwordCheck = SHA256.digest(scryptResult);
         System.out.println("STEP 2: ");
         System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
         System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
-        boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
+        boolean passwordCheckSuccess = Bytes.arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
             System.out.println("Password Check Failed!");
@@ -207,7 +209,7 @@ public class Client {
         
         // STEP 3: XOR the master identity key from the SQRLIdentity with the
         // result from STEP 1 to create the original master key
-        byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
+        byte[] originalMasterKey = Bytes.xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
         System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
@@ -220,19 +222,19 @@ public class Client {
 
         // STEP 5: SCrypt the newPassword and newPasswordSalt
         SQRLPasswordParameters newPasswordParameters = new SQRLPasswordParameters(newPasswordSalt, 16, 8, 12);
-        byte[] newScryptResult = scrypt(newPassword, newPasswordParameters);
+        byte[] newScryptResult = SCrypt.scrypt(newPassword, newPasswordParameters);
         System.out.println("STEP 5: ");
         System.out.println("SCrypt of New Password + Salt: " + Base64Url.encode(newScryptResult));
         System.out.println();
         
         // STEP 6: SHA256 the SCrypt result from STEP 5 to create the new password verifier
-        byte[] newPasswordVerify = sha256(newScryptResult);
+        byte[] newPasswordVerify = SHA256.digest(newScryptResult);
         System.out.println("STEP 6: ");
         System.out.println("New Password Verify: " + Base64Url.encode(newPasswordVerify));
         System.out.println();
 
         // STEP 7: XOR the original master key with the SCrypt result from STEP 5 to create the new master identity key
-        byte[] newMasterIdentityKey = xor(originalMasterKey, newScryptResult);
+        byte[] newMasterIdentityKey = Bytes.xor(originalMasterKey, newScryptResult);
         System.out.println("STEP 7: ");
         System.out.println("New Master Identity Key: " + Base64Url.encode(newMasterIdentityKey));
         System.out.println();
@@ -247,18 +249,18 @@ public class Client {
         // STEP 1: Scrypt the password + passwordSalt
         // This is the expensive operation and its parameters should be tuned so
         // that this operation takes between 1-2 seconds to perform.
-        byte[] scryptResult = scrypt(password, identity.getPasswordParameters());
+        byte[] scryptResult = SCrypt.scrypt(password, identity.getPasswordParameters());
         System.out.println("STEP 1: ");
         System.out.println("Scrypt of password + salt: " + Base64Url.encode(scryptResult));
         System.out.println();
 
         // STEP 2: Check the sha256 hash of the result from STEP 1 verse the
         // stored passwordVerify value.
-        byte[] passwordCheck = sha256(scryptResult);
+        byte[] passwordCheck = SHA256.digest(scryptResult);
         System.out.println("STEP 2: ");
         System.out.println("Password Verify: " + Base64Url.encode(identity.getPasswordVerify()));
         System.out.println("Password Check : " + Base64Url.encode(passwordCheck));
-        boolean passwordCheckSuccess = arrayEqual(passwordCheck, identity.getPasswordVerify());
+        boolean passwordCheckSuccess = Bytes.arrayEqual(passwordCheck, identity.getPasswordVerify());
         System.out.println("Password Check Result: " + (passwordCheckSuccess ? "PASS" : "FAIL"));
         if (!passwordCheckSuccess) {
             System.out.println("Password Check Failed!");
@@ -269,13 +271,13 @@ public class Client {
 
         // STEP 3: XOR the master identity key from the SQRLIdentity with the
         // result from STEP 1 to create the original master key
-        byte[] originalMasterKey = xor(identity.getMasterIdentityKey(), scryptResult);
+        byte[] originalMasterKey = Bytes.xor(identity.getMasterIdentityKey(), scryptResult);
         System.out.println("STEP 3: ");
         System.out.println("Original Master Key: " + Base64Url.encode(originalMasterKey));
         System.out.println();
 
         // STEP 4: HMACSHA-256 the master key result from STEP 3: with the site TLD
-        byte[] privateKey = hmacSHA256(originalMasterKey, getTLD(siteURL));
+        byte[] privateKey = HMACSHA256.mac(originalMasterKey, getTLD(siteURL));
         System.out.println("STEP 4: ");
         System.out.println("Private Key Length: " + privateKey.length * 8 + " bits");
         System.out.println("Private Key: " + Base64Url.encode(privateKey));
@@ -337,67 +339,6 @@ public class Client {
         tld = tld.substring(0, endOfTld);
         System.out.println("TLD : " + tld + "\n");
         return tld;
-    }
-
-    private static byte[] xor(byte[] a, byte[] b) {
-        byte[] output = new byte[a.length];
-        for (int i = output.length - 1; i >= 0; --i) {
-            output[i] = (byte) (a[i] ^ b[i]);
-        }
-        return output;
-    }
-
-    private static boolean arrayEqual(byte[] a, byte[] b) {
-        if (a.length != b.length)
-            return false;
-
-        for (int i = a.length - 1; i >= 0; --i) {
-            if (a[i] != b[i])
-                return false;
-        }
-        return true;
-    }
-
-    private static byte[] hmacSHA256(byte[] keyBytes, String message) {
-        Mac mac;
-        try {
-            final SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-            mac = Mac.getInstance("HmacSHA256");
-            mac.init(secretKey);
-            return mac.doFinal(message.getBytes());
-        } catch (final NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (final InvalidKeyException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private static byte[] sha256(byte[] bytes) {
-        try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            return sha256.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private static byte[] scrypt(String password, SQRLPasswordParameters sqrlPassword) {
-        System.out.println("N: " + (1 << sqrlPassword.getHashN()));
-        try {
-            long startTime = System.currentTimeMillis();
-            byte[] scryptResult = SCrypt.scrypt(password.getBytes(), sqrlPassword.getPasswordSalt(), 
-                                                1 << sqrlPassword.getHashN(), sqrlPassword.getHashR(), 
-                                                sqrlPassword.getHashP(), sqrlPassword.getHashLength());
-            long elapsedTime = System.currentTimeMillis() - startTime;
-            System.out.println("SCrypt (N = " + sqrlPassword.getHashN() + ") took " + 
-                               df.format(elapsedTime/1000.0) + " seconds.");
-            return scryptResult;
-        } catch (GeneralSecurityException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     private static SecureRandom rand = new SecureRandom();

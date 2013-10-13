@@ -33,7 +33,64 @@ public class SCryptMetrics {
     public static void main(String[] args) throws Exception {
         SCryptMetrics m = new SCryptMetrics(new SecureRandom());
         m.benchmarkSCrypt(512*1024*1024);
-        m.paramsForTimeGivenMemory(60,512*1024*1024);
+        int[] params = m.paramsForLowP(60,512*1024*1024);
+        System.out.println("try " + params[0] + " " + params[1] + " " + params[2]);
+    }
+
+    /**
+     * system heuristic prioritizing low parallelization, less accurate
+     */
+    public int[] paramsForLowP(double timeSpec, int memorySpec) {
+        if(candidates.isEmpty()) throw new IllegalStateException("no benchmark data present");
+
+        timeSpec *= 1000000000; // 1 second
+
+        // FUZZ FACTOR
+        // as timeSpec grows prediction becomes more difficult
+        timeSpec *= 1.25;
+
+        SCryptCandidate[] candidatesN = getBestCandidatesForN(candidates);
+
+        double bestCost = costStatistics.getMin();
+
+        // estimate N to match memoryspec
+        double targetNx = Math.log(memorySpec / 128) / LOG2;
+        int outNx = (int)Math.floor(targetNx);
+
+        double predictedCost = bestCost;
+        if(outNx <= 0) {
+            // TODO Log.warn
+            System.out.println("no good candidates!");
+            outNx = (int)Math.ceil(targetNx);
+        } else {
+            int predictNx = outNx;
+            while(candidatesN[predictNx] == null) {
+                predictNx--;
+            }
+            predictedCost = candidatesN[predictNx].cost;
+        }
+
+        int outR = 1;
+
+        long outTime = getTime(predictedCost,1 << outNx,1,1);
+        int outP = (int)Math.ceil(timeSpec / outTime);
+
+        // each iteration of P has equal memory usage, so the cost is high when used concurrently
+        // we must try to prevent r creeping up to satisfy performance if it will hurt overall performance
+        while(outR > 1 && outP > 1) {
+            outNx++;
+            outR = memorySpec / ((1 << outNx) * 128);
+            if(candidatesN[outNx] == null) {
+                // TODO Log warn
+                System.out.println("no sample for Nx " + outNx);
+            } else {
+                predictedCost = candidatesN[outNx].cost;
+            }
+            outTime = getTime(predictedCost,1 << outNx,outR,1);
+            outP = (int)Math.ceil(timeSpec / outTime);
+        }
+
+        return new int[]{outNx,outR,outP};
     }
 
     /**
@@ -69,6 +126,8 @@ public class SCryptMetrics {
 
         int outR = memorySpec / ((1 << outNx) * 128);
 
+        int outP = 1;
+
         long outTime;
         outR++;
         do {
@@ -81,10 +140,13 @@ public class SCryptMetrics {
             outTime = getTime(predictedCost,1 << outNx,outR,1);
         } while(outTime > 2 * timeSpec);
 
-        int outP = (int)Math.ceil(timeSpec / outTime);
+        outP = (int)Math.ceil(timeSpec / outTime);
 
-//        System.out.println("try " + outNx + " " + outR + " " + outP);
         return new int[]{outNx,outR,outP};
+    }
+
+    private long getMemory(int Nx, int r, int p) {
+        return 128l * (1 << Nx) * r;
     }
 
     public void benchmarkSCrypt(long maxMemory) throws GeneralSecurityException {
@@ -163,7 +225,7 @@ public class SCryptMetrics {
             // TODO Log.warn
             System.out.println("not enough memory for confident benchmark");
         }
-        cullSCryptCandidatesForCost(candidates,costStatistics);
+        cullSCryptCandidatesForCost(candidates,costStatistics,16);
 
         benchmarkRuntime = System.nanoTime() - benchmarkRuntime;
     }
@@ -190,7 +252,7 @@ public class SCryptMetrics {
         return (long)(cost * 128 * N * r * p);
     }
 
-    protected double cullSCryptCandidatesForCost(List<SCryptCandidate> candidates, SummaryStatistics costStats) {
+    protected double cullSCryptCandidatesForCost(List<SCryptCandidate> candidates, SummaryStatistics costStats, int midNx) {
         double stddev = costStats.getStandardDeviation();
         double cullMinimum = costStats.getMean() + stddev;
         double preferMinimum = costStats.getMean() - stddev;
@@ -201,7 +263,9 @@ public class SCryptMetrics {
                 && (candidates.get(candidateLimit) == null
                     || candidates.get(candidateLimit).cullCost(cullMinimum))) {
 
-            candidates.remove(candidateLimit);
+            if(candidates.get(candidateLimit).Nx < midNx) {
+                candidates.remove(candidateLimit);
+            }
             candidateLimit--;
         }
 

@@ -1,5 +1,7 @@
 package com.sqrl.client;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
@@ -26,7 +28,7 @@ import com.sqrl.utils.Bytes;
 
 public class Client {
        
-    public static void main(String[] args) throws GeneralSecurityException, SQRLException {
+    public static void main(String[] args) throws GeneralSecurityException, SQRLException, IOException {
         
         String warning = "WARNING: THIS CODE IS REALLY REALLY REALLY EXPIREMENTAL, DO NOT USE FOR ANYTHING "
                        + "EXCEPT LEARNING HOW SOME OF THE CRYPTO BEHIND SQRL CAN BE IMPLEMENTED.";
@@ -112,13 +114,35 @@ public class Client {
             System.out.println(exportedIdentity);
             System.out.println();
 
-            // TODO pack the exported identity into the agreed upon export format, the current proposal is:
+            // pack the exported identity into the agreed upon export format, the current proposal is:
             //        8-bit signature algorithm version
             //        256-bit encrypted master key
             //          8-bit password algorithm version
             //         64-bit per-password nonce
             //         64-bit per-password verifier
             //         16-bit computation burden spec (10 bit mantissa + 6 bit exp)
+
+            // in this implementation, "computation burden" is replaced with the following 4-byte value:
+            //          8-bit SCrypt base-2 exponent of N parameter
+            //          8-bit SCrypt r parameter
+            //         16-bit SCrypt p parameter
+
+            ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+            bytesOut.write(1); // signature algorithm version
+            bytesOut.write(exportedIdentity.getMasterIdentityKey()); // encrypted master key
+            bytesOut.write(1); // password algorithm version
+            bytesOut.write(exportedIdentity.getPasswordParameters().getPasswordSalt()); // per-password nonce
+            bytesOut.write(exportedIdentity.getPasswordVerify());
+            bytesOut.write(exportedIdentity.getPasswordParameters().getHashN());
+            bytesOut.write(exportedIdentity.getPasswordParameters().getHashR());
+            bytesOut.write((exportedIdentity.getPasswordParameters().getHashP() >> 8) & 0xFF);
+            bytesOut.write(exportedIdentity.getPasswordParameters().getHashP() & 0xFF);
+            byte[] storedMaster = bytesOut.toByteArray();
+            String encodedStoredMaster = Base64Url.encode(storedMaster);
+
+            System.out.println("EXPORT MASTER KEY PACKAGE: ");
+            System.out.println(encodedStoredMaster);
+            System.out.println();
         }
     }
 

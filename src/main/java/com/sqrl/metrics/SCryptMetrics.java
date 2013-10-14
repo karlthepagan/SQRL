@@ -14,6 +14,13 @@ import java.util.*;
 public class SCryptMetrics {
     private static final double LOG2 = Math.log(2);
 
+    /*
+     * r=1 invites pre-compute attacks on salsa20/8
+     *
+     * see [Percival] p10, Footnote 14.
+     */
+    private static final int MIN_R = 2;
+
     private final byte[] password;
     private byte[] salt;
 
@@ -32,8 +39,12 @@ public class SCryptMetrics {
 
     public static void main(String[] args) throws Exception {
         SCryptMetrics m = new SCryptMetrics(new SecureRandom());
-        m.benchmarkSCrypt(512*1024*1024);
-        int[] params = m.paramsForLowP(60,512*1024*1024);
+        long time = System.currentTimeMillis();
+        SCrypt.scrypt(m.password,m.salt,1<<17,2,645,32);
+        System.out.println(System.currentTimeMillis() - time);
+        m.benchmarkSCrypt(32*1024*1024);
+//        int[] params = m.paramsForLowP(60,32*1024*1024);
+        int[] params = m.paramsForTimeGivenMemory(60,32*1024*1024);
         System.out.println("try " + params[0] + " " + params[1] + " " + params[2]);
     }
 
@@ -70,14 +81,14 @@ public class SCryptMetrics {
             predictedCost = candidatesN[predictNx].cost;
         }
 
-        int outR = 1;
+        int outR = MIN_R;
 
-        long outTime = getTime(predictedCost,1 << outNx,1,1);
+        long outTime = getTime(predictedCost,1 << outNx,outR,1);
         int outP = (int)Math.ceil(timeSpec / outTime);
 
         // each iteration of P has equal memory usage, so the cost is high when used concurrently
         // we must try to prevent r creeping up to satisfy performance if it will hurt overall performance
-        while(outR > 1 && outP > 1) {
+        while(outR > MIN_R && outP > 1) {
             outNx++;
             outR = memorySpec / ((1 << outNx) * 128);
             if(candidatesN[outNx] == null) {
@@ -128,17 +139,21 @@ public class SCryptMetrics {
 
         int outP = 1;
 
-        long outTime;
+        long outTime = Long.MAX_VALUE;
         outR++;
         do {
-            if(outR > 1) {
+            if(outR >= MIN_R) {
                 outR--;
             } else {
                 outNx--;
-                outR++;
+                if(outTime < timeSpec) {
+                    outR *= 2;
+                } else {
+                    outR++;
+                }
             }
             outTime = getTime(predictedCost,1 << outNx,outR,1);
-        } while(outTime > 2 * timeSpec);
+        } while(outR < MIN_R || outTime > 2 * timeSpec);
 
         outP = (int)Math.ceil(timeSpec / outTime);
 
